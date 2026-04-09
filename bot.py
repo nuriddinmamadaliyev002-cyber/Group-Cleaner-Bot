@@ -59,8 +59,8 @@ async def log_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         chat.title or chat.id,
         chat.type,
         member_update.new_chat_member.user.full_name,
-        member_update.old_status,
-        member_update.new_status,
+        member_update.old_chat_member.status,
+        member_update.new_chat_member.status,
     )
 
 
