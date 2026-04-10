@@ -40,14 +40,44 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Faqat shu owner qo'shgan guruhlarda ishlaydi
+# ---------------------------------------------------------------------------
+OWNER_ID = 816464166
+
+
+# ---------------------------------------------------------------------------
+# Handler: bot guruhga qo'shilganda owner tekshiruvi
+# ---------------------------------------------------------------------------
+async def check_owner_on_join(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Bot yangi guruhga qo'shilganda tekshiradi:
+    agar qo'shgan kishi owner bo'lmasa — bot o'zi chiqib ketadi.
+    """
+    my_update = update.my_chat_member
+    if not my_update:
+        return
+
+    new_status = my_update.new_chat_member.status
+    added_by = my_update.from_user
+
+    if new_status in ("member", "administrator"):
+        if added_by.id != OWNER_ID:
+            logger.warning(
+                "Ruxsatsiz qo'shish! user=%s (id=%s) | chat=%s — Bot chiqib ketmoqda.",
+                added_by.full_name,
+                added_by.id,
+                my_update.chat.title,
+            )
+            await context.bot.leave_chat(my_update.chat.id)
+
 
 # ---------------------------------------------------------------------------
 # Handler: a'zolik o'zgarishlari (joined / left / added / removed)
 # ---------------------------------------------------------------------------
 async def log_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    ChatMember updatelarini tutib log yozadi (xabar o'chirish shart emas,
-    chunki service xabarni alohida handler o'chiradi).
+    ChatMember updatelarini tutib log yozadi.
     """
     member_update = update.chat_member or update.my_chat_member
     if not member_update:
@@ -67,9 +97,6 @@ async def log_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 async def delete_service_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Guruhga qo'shilish / chiqish haqidagi service xabarlarini o'chiradi.
-
-    Telegram bu xabarlarni Message.new_chat_members va
-    Message.left_chat_member maydonlari orqali uzatadi.
     """
     message = update.effective_message
     if message is None:
@@ -111,6 +138,14 @@ def main() -> None:
         )
 
     app = Application.builder().token(token).build()
+
+    # MY_CHAT_MEMBER — bot qo'shilganda owner tekshiruvi
+    app.add_handler(
+        ChatMemberHandler(
+            check_owner_on_join,
+            chat_member_types=ChatMemberHandler.MY_CHAT_MEMBER,
+        )
+    )
 
     # ChatMemberHandler - a'zolik o'zgarishlarini log qilish
     app.add_handler(
