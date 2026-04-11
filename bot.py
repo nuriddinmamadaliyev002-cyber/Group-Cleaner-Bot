@@ -8,6 +8,8 @@ O'chiriladigan xabar turlari:
   - "User was added by ..."
   - "User left the group/channel"
   - "User was removed by ..."
+  - "X closed the topic"
+  - "X reopened the topic"
 
 O'rnatish:
   pip install python-telegram-bot==21.*
@@ -96,7 +98,7 @@ async def log_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def delete_service_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Guruhga qo'shilish / chiqish haqidagi service xabarlarini o'chiradi.
+    Guruhga qo'shilish / chiqish / topic haqidagi service xabarlarini o'chiradi.
     """
     message = update.effective_message
     if message is None:
@@ -109,6 +111,14 @@ async def delete_service_message(update: Update, context: ContextTypes.DEFAULT_T
         reason = f"joined/added: {', '.join(names)}"
     elif message.left_chat_member:
         reason = f"left/removed: {message.left_chat_member.full_name}"
+    elif message.forum_topic_created:
+        reason = f"topic created: {message.forum_topic_created.name}"
+    elif message.forum_topic_closed:
+        reason = "topic closed"
+    elif message.forum_topic_reopened:
+        reason = "topic reopened"
+    elif message.forum_topic_edited:
+        reason = "topic edited"
     else:
         return
 
@@ -167,6 +177,17 @@ def main() -> None:
     app.add_handler(
         MessageHandler(
             filters.StatusUpdate.LEFT_CHAT_MEMBER,
+            delete_service_message,
+        )
+    )
+
+    # Topic xabarlari
+    app.add_handler(
+        MessageHandler(
+            filters.StatusUpdate.FORUM_TOPIC_CREATED
+            | filters.StatusUpdate.FORUM_TOPIC_CLOSED
+            | filters.StatusUpdate.FORUM_TOPIC_REOPENED
+            | filters.StatusUpdate.FORUM_TOPIC_EDITED,
             delete_service_message,
         )
     )
